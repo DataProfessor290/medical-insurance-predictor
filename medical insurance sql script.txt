@@ -1,0 +1,108 @@
+CREATE TABLE med_insurance_dataset(
+age INT,
+sex TEXT,
+bmi FLOAT,
+children INT,
+smoker TEXT,
+region TEXT,
+charges FLOAT
+);
+
+-- Data Cleaning
+--- Saving the distinct row to remove the duplicated rows 
+CREATE TABLE dataset AS(
+	SELECT DISTINCT *
+	FROM med_insurance_dataset
+);
+
+--- Checking for missing values 
+SELECT 
+	COUNT(*) FILTER (WHERE age IS NULL) missing_age,
+	COUNT(*) FILTER (WHERE sex IS NULL) missing_sex,
+	COUNT(*) FILTER (WHERE bmi IS NULL) missing_bmi,
+	COUNT(*) FILTER (WHERE children IS NULL) missing_children,
+	COUNT(*) FILTER (WHERE region IS NULL) missing_region,
+	COUNT(*) FILTER (WHERE smoker IS NULL) missing_smoker,
+	COUNT(*) FILTER (WHERE charges IS NULL) charges_missing
+FROM dataset;
+
+
+--- Handling Missing 
+UPDATE med_insurance_dataset
+SET charges = (SELECT 
+					AVG(charges)
+				FROM med_insurance_dataset)
+WHERE charges IS NULL;
+
+
+-- replacing 'y' in the smoker column to 'yes'
+UPDATE dataset
+SET smoker = 'yes'
+WHERE smoker = 'y';
+
+--Exploratory Data Analysis
+-- Demograp[hic Insight 
+--- Age Distribution: What is the average age minimum and Maximum age of patients
+SELECT ROUND(AVG(age),2) "Average Age"
+FROM dataset;
+
+
+--- What is the proportion of Male and Female in percentage 
+SELECT sex, 
+		COUNT(sex) gender_count,
+		ROUND((COUNT(sex) *100 / SUM(Count(sex)) OVER()),2) || '%' "Age Percentage"
+FROM dataset
+GROUP BY 1;
+
+
+--- Regional Distribution: How are the patients distributed across different regions
+SELECT region,
+		COUNT(region) "Region Count",
+		ROUND((COUNT(region) * 100 / SUM(COUNT(region)) OVER()),2) || '%' "Distribution Percentage"
+FROM dataset
+GROUP BY 1;
+
+
+
+-- Health And Lifestyle 
+--- BMI Statistics: What is average BMI of the patients 
+SELECT ROUND(AVG(bmi)::NUMERIC,2) "Average BMI"
+FROM dataset;
+
+
+--- Smoking Prevelance: What is the percentage of smokers to non-smokers
+SELECT smoker,
+		Count(smoker),
+		ROUND(COUNT(smoker) * 100 /SUM(COUNT(smoker)) OVER()::NUMERIC, 2) || '%' "Percentage Count"
+FROM dataset
+GROUP BY 1;
+
+
+-- Family Dependents
+--- Children Distribution: What is the average chuldren distribution per patient
+SELECT ROUND(AVG(children):: NUMERIC, 2)
+FROM dataset;
+
+--- Relationship Between Children and Charges: Do Patients with more children tend to have higher or lower medical charges 
+SELECT ROUND(CORR(children, charges)::NUMERIC,2) "Correlation Result"
+FROM dataset;
+
+
+-- Financial Insights ( Charges Analysis)
+--- Average Medical Charges: What is the average charges per patients 
+SELECT ROUND(AVG(charges)::NUMERIC, 2) "Average Charges"
+FROM dataset;
+
+
+--- Charges By Region: Which Region has the Highest and Lowest Charges 
+SELECT region,
+		ROUND(AVG(charges)::NUMERIC,2) "Average Charges"
+FROM dataset
+GROUP BY 1
+ORDER BY 2 DESC;
+
+--- Impact Of Smoking on Charges: How much higher are the medical charges for smokers compared to non-smokers
+SELECT smoker,
+		ROUND(AVG(charges)::NUMERIC, 2) "Average Charges"
+FROM dataset
+GROUP BY 1;
